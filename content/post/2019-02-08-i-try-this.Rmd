@@ -163,6 +163,6 @@ I'll touch upon this subject in more breadth in a future post.
 
 ## Further reading
 
-To anyone curious to learn a bit more about the questions I've tried to answer in this report I'll recommend reading the light-weight Technical Report by Pearl: [The Seven Tools of Causal Inference with Reflections on Machine Learning](https://github.com/IyarLin/causal-inference/blob/master/miscellaneous%20files/The%20Seven%20Pillars%20of%20Causal%20Reasoning%20with%20Reflections%20on%20Machine%20Learning%20Pearl%202018.pdf)
+To anyone curious to learn a bit more about the questions I've tried to answer in this report I'll recommend reading the light-weight Technical Report by Pearl: [The Seven Tools of Causal Inference with Reflections on Machine Learning](https://github.com/IyarLin/blog-code/blob/master/miscellaneous%20files/The%20Seven%20Pillars%20of%20Causal%20Reasoning%20with%20Reflections%20on%20Machine%20Learning%20Pearl%202018.pdf)
 
 For a more in-depth introduction to Causal inference and the DAG machinery I'd recommend getting Pearl's short book: [Causal Inference in Statistics - A Primer](http://bayes.cs.ucla.edu/PRIMER/)
