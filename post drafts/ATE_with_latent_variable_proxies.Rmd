@@ -1,0 +1,98 @@
+---
+title: "Identifying average causal effects with latent confounding variable proxies"
+author: "Iyar Lin"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  github_document:
+    toc: true
+    pandoc_args: --webtex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F, cache = F)
+set.seed(2)
+options(scipen = 999)
+
+packages <- c(
+  "tidyverse", # best thing that happend to me
+  "pander",  # table rendering
+  "dagitty", # plot dags
+  "ggdag" # ggplto dags
+)
+
+sapply(
+  packages,
+  function(x) if (!require(x, character.only = TRUE, quietly = T)) {
+      install.packages(x, quiet = T, verbose = F)
+      library(x, character.only = T, quietly = T, verbose = F)
+    }
+)
+```
+
+# Intro  
+When using the Backdoor criteria to find the adjustment set required to estimate the average causal effect of setting a variable $X=x$ on some other variable $Y$ we may discover that we need to condition on an unmeasured (latent) variable. Often times we'll have proxy variables (i.e. noisy measurements of the latent variable) at hand. In this script I demonstrate how to utilize the latent variable proxies in the structural equation settings to estimate the ATE as presented at [Kuroki and Pearl, 2014](https://pdfs.semanticscholar.org/19da/be9fdbe82d74a584f5ece882f5825e4effdb.pdf)
+
+# Both proxies are conditionally independant given U
+
+We consider the following graphical model:
+
+```{r plot model graph}
+g <- dagitty(
+  "dag {
+  U [latent, pos=\"0,1\"]
+  W [pos=\"2.000,1.000\"]
+  X [exposure,pos=\"1.000,0.000\"]
+  Y [outcome,pos=\"3.000,0.000\"]
+  Z [pos=\"-1.000,0.000\"]
+  U -> W [beta = 0.3]
+  U -> X [beta = -0.5]
+  U -> Y [beta = 0.9]
+  U -> Z [beta = -0.2]
+  X -> Y [beta = 0.3]
+  }"
+)
+
+ggdag(tidy_dagitty(g)) + theme_dag_blank()
+```
+
+Here, $Z$ and $W$ serve as conditionally independent proxies of $U$ given $U$. The average causal effect (ACE) in this toy model is 0.3.
+
+One would think conditioning on $\{Z,W\}$ would suffice to "account for the confounder" but unfortunately that is not the case. Below I simulate 100K observations from the model above and show the resulting linear regression coefficients when fitting the model $Y = \beta_1X + \beta_2Z + \beta_3W + \epsilon$:
+
+```{r naive model, results = "asis"}
+sim_data <- simulateSEM(g, N = 100000)
+naive_model <- lm(Y ~ X + Z + W, data = sim_data)
+
+pandoc.table(coef(naive_model))
+```
+
+Below I simulate the dataset 1000 times for a variety of sample sizes, demonstrate how to estimate the ACE correctly and show the estimator mean and standard deviation as a function of the sample size:
+
+```{r calculate the effect correctly, results = "asiss"}
+ACE <- data.frame(N = c(100, 1000, 10000, 100000), 
+                  ACE_mean = NA, 
+                  ACE_SD = NA)
+
+for(i in 1:nrow(ACE)){
+  sample_size <- ACE$N[i]
+  ACE_vec = replicate(1000, expr = {
+    sim_data <- simulateSEM(g, N = sample_size)
+    Sigma <- cov(sim_data)
+    sigma_x_y <- Sigma[2, 3]
+    sigma_w_z <- Sigma[1, 4]
+    sigma_x_w <- Sigma[2, 1]
+    sigma_y_z <- Sigma[3, 4]
+    sigma_x_x <- Sigma[2, 2]
+    sigma_x_z <- Sigma[2, 4]
+    
+    ACE <- (sigma_x_y*sigma_w_z - sigma_x_w*sigma_y_z)/
+      (sigma_x_x*sigma_w_z - sigma_x_w*sigma_x_z)
+    ACE})
+  ACE$ACE_mean[i] <- mean(ACE_vec)
+  ACE$ACE_SD[i] <- sd(ACE_vec)
+}
+
+pandoc.table(ACE)
+```
+
+It's quite astounding to see one needs at least 10K observations to get an "OK" estimator. 

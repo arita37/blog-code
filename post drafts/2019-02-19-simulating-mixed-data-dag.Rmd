@@ -1,0 +1,49 @@
+---
+title: simulating-mixed-data-dag
+author: Iyar Lin
+date: '2019-02-19'
+slug: simulating-mixed-data-dag
+categories:
+  - R
+tags:
+  - causal-inference
+  - R
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = F)
+set.seed(2)
+options(scipen = 999)
+
+packages <- c(
+  "tidyverse", # best thing that happend to me
+  "pander", # table rendering
+  "dagitty", # Create DAGs
+  "ggdag" # ggplot DAGs
+)
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(char = packages)
+```
+
+# Motivation  
+
+For me an important part of researching a topic consists of simulation studies. Whenever I learn a new algorithm or have an hypothesis about how it would work under certain circumstances I tend to use simulations.
+
+When it comes to simulating data from DAGs there's a slew of existing functions:
+
+1. The "dagitty" package has the simulateSEM function. This can only work with continuous variables and gaussian noise though  
+1. The "bnlearn" package has the rbn function. This enables mixed data simulation with the caveat that categorical nodes can have only categorical parents (Wonder why that is BTW, if anyone can enlight me I'd appreciate it).
+1. The "dagR" package has dag.sim function. This enables only continuous and binary nodes.  
+
+and many many others.
+
+There are 2 features all of these lack which made me go and build my "yet another" dag simulation function:  
+1. Categorical variables simulation  
+1. Non linear functionals  
+
+If you know a function that does these please let me know!  
+
+# simMixedSAG function  
+
+The 
