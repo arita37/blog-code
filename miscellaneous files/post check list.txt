@@ -1,5 +1,5 @@
 Spell check. 
-Correct date. 
+Correct date. serv
 Make sure all links work. 
 Commit and push the blog code. 
 Publish on linkedIn and Medium.  
