@@ -4,20 +4,34 @@ author: Iyar Lin
 date: 2019-02-08
 slug: correlation-is-not-causation-so-what-is
 categories: [R]
-tags: [causal-inference, R]
+tags: [causal-inference, light-read, backdoor-criteria]
+comments: true
 ---
 
 
 
-<div id="intro" class="section level1">
-<h1>Intro</h1>
-<p>Machine learning applications have been growing in volume and scope rapidly over the last few years. What’s Causal inference, how is it different than plain good ole’ ML and when should you consider using it? In this report I try giving a short and concrete answer by using an example.</p>
+<div class="figure">
+<img src="https://imgs.xkcd.com/comics/correlation.png" width="600" height="300" />
+
 </div>
+<p>Machine learning applications have been growing in volume and scope rapidly over the last few years. What’s Causal inference, how is it different than plain good ole’ ML and when should you consider using it? In this post I try giving a short and concrete answer by using an example.</p>
 <div id="a-typical-data-science-task" class="section level1">
 <h1>A typical data science task</h1>
 <p>Imagine we’re tasked by the marketing team to find the effect of raising marketing spend on sales. We have at our disposal records of marketing spend (mkt), visits to our website (visits), sales, and competition index (comp).</p>
 <p>We’ll simulate a dataset using a set of equations (also called structural equations):</p>
-<p><span class="math display">\[sales = \beta_1vists + \beta_2comp + \epsilon_1\]</span> <span class="math display">\[vists = \beta_3mkt + \epsilon_2\]</span> <span class="math display">\[mkt = \beta_4comp + \epsilon_3\]</span> <span class="math display">\[comp = \epsilon_4\]</span> with <span class="math inline">\(\{\beta_1, \beta_2, \beta_3\, \beta_4\} = \{0.3, -0.9, 0.5, 0.6\}\)</span></p>
+<span class="math display">\[\begin{equation}
+sales = \beta_1vists + \beta_2comp + \epsilon_1
+\end{equation}\]</span>
+<span class="math display">\[\begin{equation}
+vists = \beta_3mkt + \epsilon_2
+\end{equation}\]</span>
+<span class="math display">\[\begin{equation}
+mkt = \beta_4comp + \epsilon_3
+\end{equation}\]</span>
+<span class="math display">\[\begin{equation}
+comp = \epsilon_4
+\end{equation}\]</span>
+<p>with <span class="math inline">\(\{\beta_1, \beta_2, \beta_3\, \beta_4\} = \{0.3, -0.9, 0.5, 0.6\}\)</span></p>
 <p>All data presented in graphs or used to fit models below is simulated from the above equations.</p>
 <p>Below are the first few rows of the dataset:</p>
 <table style="width:46%;">

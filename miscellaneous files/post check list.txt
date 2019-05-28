@@ -1,0 +1,5 @@
+Spell check. 
+Correct date. 
+Make sure all links work. 
+Commit and push the blog code. 
+Publish on linkedIn and Medium.  

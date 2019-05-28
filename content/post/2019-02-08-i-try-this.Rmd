@@ -4,7 +4,8 @@ author: Iyar Lin
 date: 2019-02-08
 slug: correlation-is-not-causation-so-what-is
 categories: [R]
-tags: [causal-inference, R]
+tags: [causal-inference, light-read, backdoor-criteria]
+comments: true
 ---
 
 ```{r setup, include=FALSE}
@@ -23,9 +24,9 @@ if (!require("pacman")) install.packages("pacman")
 pacman::p_load(char = packages)
 ```
 
-# Intro
+![](https://imgs.xkcd.com/comics/correlation.png){width=600px height=300px}
 
-Machine learning applications have been growing in volume and scope rapidly over the last few years. What's Causal inference, how is it different than plain good ole' ML and when should you consider using it? In this report I try giving a short and concrete answer by using an example.
+Machine learning applications have been growing in volume and scope rapidly over the last few years. What's Causal inference, how is it different than plain good ole' ML and when should you consider using it? In this post I try giving a short and concrete answer by using an example.
 
 # A typical data science task
 
@@ -33,10 +34,22 @@ Imagine we're tasked by the marketing team to find the effect of raising marketi
 
 We'll simulate a dataset using a set of equations (also called structural equations):
 
-$$sales = \beta_1vists + \beta_2comp + \epsilon_1$$
-$$vists = \beta_3mkt + \epsilon_2$$
-$$mkt = \beta_4comp + \epsilon_3$$
-$$comp = \epsilon_4$$
+\begin{equation}
+sales = \beta_1vists + \beta_2comp + \epsilon_1
+\end{equation}
+
+\begin{equation}
+vists = \beta_3mkt + \epsilon_2
+\end{equation}
+
+\begin{equation}
+mkt = \beta_4comp + \epsilon_3
+\end{equation}
+
+\begin{equation}
+comp = \epsilon_4
+\end{equation}
+
 with $\{\beta_1, \beta_2, \beta_3\, \beta_4\} = \{0.3, -0.9, 0.5, 0.6\}$ 
 
 All data presented in graphs or used to fit models below is simulated from the above equations.

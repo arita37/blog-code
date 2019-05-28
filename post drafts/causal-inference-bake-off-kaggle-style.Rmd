@@ -1,0 +1,89 @@
+---
+title: 'Causal inference bake off (Kaggle style!)'
+author: Iyar Lin
+date: '2019-02-14'
+slug: causal-inference-bake-off-kaggle-style
+categories:
+  - R
+tags: [causal-inference, R, ML]
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = F)
+set.seed(1)
+options(scipen = 999)
+
+packages <- c(
+  "tidyverse", # best thing that happend to me
+  "pander", # table rendering
+  "grf", # causal forests
+  "rpart", # decision trees,
+  "rpart.plot", # pretty plotting of rpart
+  "ranger" # random forests
+)
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(char = packages)
+
+if (!require("bartCause")) pacman::p_load_gh("vdorie/bartCause")
+if (!require("aciccomp2017")) pacman::p_load_gh("vdorie/aciccomp/2017")
+```
+
+# Intro
+
+On my last few posts I've tried answering questions such as "What is Causal inference?", "How is it different than ML?" and "When should I used it?" on a very high level.
+
+In this post we finally get our hands dirty with some Kaggle style Causal inference algorithms bake off! In this competition I'll pit some well known ML algorithms vs some specialized Causal inference algorithms and see who's hot and who's not!
+
+# Prolem set up  
+
+We already know from previuos posts that in Causal Inference we never have the ground truth as we do in ML. To enable model benchmarking either fully or partly synthetic datasets are used. In this post we'll use the partially synthetic dataset (real features, synthetic treatment and outcome variables) generated for the "2017 Atlantic Causal Inference Data Analysis Challenge".
+
+Below I provide a very short overview of the dataset (For a full description see this *short paper*):
+
+We consider a non randomized dataset with a continuous outcome variable $Y$ and a binary treatment variable $Z$, with $Z=1$ meaning "treated" and $Z=0$ "untreated". We have at our disposal a set of 58 features of which 8 constitute the true adjustment set and the rest are nuisance features (i.e. they have no relation to $Y$).
+
+
+```{r}
+aciccomp2017::input_2017
+a <- aciccomp2017::dgp_2017(1, 1)
+```
+
+
+## Relatively small effect size
+
+## 
+
+Classic ML algorithms are geared towards accurate prediction of $f(X, Z)$, not $f(1,Z) - f(0,Z)$. If the effect of changing $X$ is small when compared with the effect of changes in some variables in $Z$ than the difference $f(1,Z) - f(0,Z)$ might wash out. 
+
+Let's consider for example the following model (defined by a set of equations, also termed "structural equations"):
+
+$$Y = \beta_0 + \beta_1 X + \beta_2 Z + \epsilon$$
+
+$$X = 1 \, \text{if} \, Z + U_x > 0.4, \, X = 0 \, \text{if} \, Z + U_x \leq 0.4$$
+
+and
+
+$$Z = U_z$$
+
+Where $U_x, \, U_z, \, \epsilon \sim \mathbb{N}(0,1)$ and $\{\beta_0, \beta_1, \beta_2\} = \{0.2, 0.1, -0.8\}$
+
+So the treatment effect in this case is $\beta_1 = 0.1$
+
+I've simulated a dataset from the above equations and fitted the model $\hat{f}(X,Z)$ using a decision tree. Below I plot the fitted tree:
+
+```{r simulate dataset}
+N <- 1000
+Z <- rnorm(N)
+X <- Z + rnorm(N) > 0.4
+Y <- 0.2 + X * (0.1) - 0.8 * Z + rnorm(N)
+sim_data <- data.frame(X, Z, Y)
+
+a <- rpart(Y ~ X + Z, data = sim_data)
+rpart.plot(a)
+```
+
+We can see that the tree completely ignores the $X$ variable, giving the impression there's no treatment effect at all. I've simulated a very simple dataset and used a very simple model for illustration purposes. The problem I've demonstrated persists though when using more sophisticated algorithms when dealing with high dimensional datasets and/or non-linear relationships.
+
+
+
