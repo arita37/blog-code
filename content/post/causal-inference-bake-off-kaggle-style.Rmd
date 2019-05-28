@@ -433,4 +433,4 @@ We can see that the causal inference oriented algorithms all fair better than th
 
 It would seem BART based algorithms are best suited for CI tasks among the competing algorithms. This is not entirely unexpected as it was [reported](https://doi.org/10.1198/jcgs.2010.08162) in the past that BART does well for CI tasks. It's also worth mentioning that the author of the package implementing BARTC is a member of the group that put together the dataset we used in this simulation study.
 
-Think you know an algorithm that can pinpoint the $CATE$ even in the hard case? You can write them in the comments below, or feel free to use the [code](https://github.com/IyarLin/blog-code/blob/master/content/blog/causal-inference-bake-off-kaggle-style.Rmd) that produced this post to add them to the competition. 
+Think you know an algorithm that can pinpoint the $CATE$ even in the hard case? You can write them in the comments below, or feel free to use the [code](https://github.com/IyarLin/blog-code/blob/master/content/post/causal-inference-bake-off-kaggle-style.Rmd) that produced this post to add them to the competition. 

@@ -205,6 +205,6 @@ If you're after some more light read on the connections between classic ML and C
 
 For a proof of equation 5 read chapter 3 of Pearls' light intro to causal inference [Causal Inference in Statistics - A Primer](http://bayes.cs.ucla.edu/PRIMER/). 
 
-You can find the script producing this report [here](https://github.com/IyarLin/blog-code/blob/master/content/blog/2019-03-13-x-affects-y-what-does-that-even-mean.Rmd)
+You can find the script producing this report [here](https://github.com/IyarLin/blog-code/blob/master/content/post/2019-03-13-x-affects-y-what-does-that-even-mean.Rmd)
 
 I'd like to thank Sonia Vilenski-Lin, Yair Stark, Aviv Peled and Rithvik Mundra for providing feedback on this post drafts.
