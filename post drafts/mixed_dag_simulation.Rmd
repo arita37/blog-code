@@ -1,0 +1,225 @@
+---
+title: 'Mixed DAG simulation'
+author: Iyar Lin
+date: '2019-05-20'
+slug: mixed_dag_simulation
+categories:
+  - R
+tags: [R, simulation]
+comments: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = F)
+set.seed(1)
+options(scipen = 999)
+
+packages <- c(
+  "tidyverse", # best thing that ever happend to me
+  "pander", # table rendering
+  "dagitty", # Create DAGs
+  "ggdag" # ggplot DAGs
+)
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(char = packages)
+
+if (!require("bartCause")) pacman::p_load_gh("vdorie/bartCause")
+```
+
+![](/post/causal-inference-bake-off-kaggle-style_files/target.jpg){width=600px height=300px}
+
+# Intro 
+
+When studying Causal Inference we usually need to use simulations quite extensively (one of example of that was shown on my [last post](link_to_specific_section)).
+
+When it comes to simulating data from DAGs there's a slew of existing solutions in R:
+
+1. The simulateSEM function from "dagitty" package simulates only continuous gaussian variables.  
+1. The dag.sim function from "dagR" package can simulate mixed data type datatsets but only continuous and binary nodes (not categorical).  
+1. The rbn function from "bnlearn" package can simulate mixed data type datatsets (both continuous and categorical) but categorical nodes can only have categorical parents (Wonder why that is BTW, if anyone can enlight me I'd appreciate it).  
+
+Some of these packages also contain algorithms to identify the underlying DAG in datasets. When studying algorithms for estimation of the DAG (e.g. iamb function in blearn), each algorithm will probably be best at identifiying the DAGs underlying datasets simulated by functions in for the same package.
+
+In this post I'll briefly introduce a custom funtion I've wrote: sim_mixed_dag. It can simulate mixed data type datasets and doesn't follow the assumptions of any of package I know of. 
+
+I'll briefly discuss it's internal logic and demonstrate some of it's features.
+
+# The basic building block: the "f" function
+
+Every node $j$ in a graph is a function $f_j$ of it's parent nodes $PA_j$. The default function is: 
+
+$$f_j(PA_j) = \sum_{i \in PA_j}\beta_{ij}x_i + \epsilon_j$$
+For brevity I'll use henceforth the shorthand $lp = \sum_{i \in PA_j}\beta_{ij}x_i$ 
+
+## Setting Beta coefficients manually
+
+In this introduction I'll use the DAG presented on my [first post](link): 
+
+```{r plot dag}
+g <- dagitty("dag {
+sales [pos=\"0,0\"]
+mkt [pos=\"2,0\"]
+comp [pos=\"1,1\"]
+visits [pos=\"1,0\"]
+visits -> sales
+mkt -> visits
+comp -> mkt
+comp -> sales
+}")
+
+ggdag(tidy_dagitty(g)) + theme_dag_blank()
+```
+
+Below I simulate a dataset where we use the above equation for all nodes, and set the coefficient $\beta_{comp,sales} = -2$
+
+```{r}
+source("../miscellaneous files/sim_mixed_dag.R")
+sim_data <- sim_mixed_dag(dag = g, f.args = list(sales = list(betas = list(comp = -2)), 
+                                                 mkt = list(betas = list(comp = 0))))
+sim_data %>% ggplot(aes(comp, sales)) + geom_point() + stat_smooth(method = "lm")
+```
+
+Note all $\beta$ coefficients not set manually are drawn from a standard normal distribution. 
+
+## Change signal to noise ratio
+
+We can set how noisy the errors are using the "sinr" (signal to noise ratio) argument:
+
+```{r}
+sim_data <- sim_mixed_dag(dag = g, f.args = list(sales = list(betas = list(comp = -2), sinr = 5), 
+                                                 mkt = list(betas = list(comp = 0))))
+sim_data %>% ggplot(aes(comp, sales)) + geom_point() + stat_smooth(method = "lm")
+```
+
+## Add link function
+
+We can tweak the $f$ function by adding a link function $g$:
+
+$$f_j(PA_j) = g(lp) + \epsilon_j$$
+
+Where $lp = \sum_{i \in PA_j}\beta_{ij}x_i$ is the "linear predictor".
+
+Below I apply a "cosin" link function:  
+
+```{r}
+sim_data <- sim_mixed_dag(dag = g, f.args = list(sales = list(betas = list(comp = -2), link = "cosin", sinr = 3), 
+                                                 mkt = list(betas = list(comp = 0))))
+sim_data %>% ggplot(aes(comp, sales)) + geom_point() + stat_smooth()
+```
+
+Another function implemented is a type of a quadratic transformation:
+
+```{r}
+sim_data <- sim_mixed_dag(dag = g, f.args = list(sales = list(betas = list(comp = -2), link = "quadratic", sinr = 3), 
+                                                 mkt = list(betas = list(comp = 0))))
+sim_data %>% ggplot(aes(comp, sales)) + geom_point() + stat_smooth()
+```
+
+Lastly, I also incorporate an exponent function:
+
+```{r}
+sim_data <- sim_mixed_dag(dag = g, f.args = list(sales = list(betas = list(comp = -1), link = "exp", sinr = 2), 
+                                                 mkt = list(betas = list(comp = 0))))
+sim_data %>% ggplot(aes(comp, sales)) + geom_point() + stat_smooth()
+```
+
+## Categorical variables
+
+We introduce categorical variables with $M$ levels via the following transformation:
+
+$$f_j(PA_j) = cat(g(lp) + \epsilon_j)$$
+where we have:
+
+$$  
+cat(x) = 
+\begin{cases}
+\text{level 1,} &\quad\text{if} \, x/sd(x) \leq \Phi^{-1}(100/M) \\
+\text{level 2,} &\quad\text{if} \, x/sd(x) > \Phi^{-1}(100/M) \, , x/sd(x) \leq \Phi^{-1}(100\cdot 2/M)\\
+\dots & \dots \\
+\text{level M,} &\quad\text{if} \, x/sd(x) > \Phi^{-1}(100\cdot(M-1)/M) \\
+\end{cases}
+$$
+
+We set the number of levels using the "levels" argument (where levels = 1 means continuous variable):
+
+```{r}
+sim_data <- sim_mixed_dag(dag = g, f.args = list(sales = list(betas = list(comp = -2), 
+                                                              link = "quadratic", sinr = 3, levels = 3, labels = c("low", "medium", "high")), mkt = list(betas = list(comp = 0))))
+sim_data %>% ggplot(aes(sales, comp)) + geom_boxplot() + stat_smooth()
+```
+
+# The gen_model_param function
+
+When calling the sim_mixed_dag function all model parameters not set explicitly are either chosen from a default (e.g. link = "identity") or drawn randomly (e.g beta coefficients).
+
+That means that each time one calls the sim_mixed_dag function the data will be simulated using different model parameters unless all model parameters are specified manually.
+
+Since the number of model parameters can get pretty big, one can use the gen_model_param function to easily specify all model parameters. The function takes as input a partially specified f.args list and returns that same listtt with all paramaters not specified by the user filled in. That returned list can now be used across multiple runs of the sim_mixed_dag function with all model parameters staying consistent.
+
+Below I generate a model parameter list specifying some of the parametrs:
+
+```{r}
+f.args_partial = list(sales = list(betas = list(comp = -2), 
+                                   link = "quadratic", sinr = 3, levels = 3, 
+                                   labels = c("low", "medium", "high")), mkt = list(betas = list(comp = 0)))
+print(f.args_partial)
+```
+
+Next I use the gen_model_param to fill in the remaining non-specified parameters as well:
+
+```{r}
+source("../miscellaneous files/gen_model_param.R")
+f.args_full <- gen_model_param(dag = g, f.args = f.args_partial)
+print(f.args_full)
+```
+
+# The get_ate function
+
+For simple DAGs and model parameters the analytic calculation of the $ATE$ is pretty simple (e.g. continuous gaussian distributed, no interactions etc). For instance consider the problem setup discussed on my [first post](link).
+
+```{r, results = "asis"}
+source("../miscellaneous files/get_ate.R")
+f.args <- gen_model_param(dag = g, f.args = list(sales = list(betas = list(visits = 0.3, comp = -0.9)), 
+                                                 visits = list(betas = list(mkt = 0.5)), 
+                                                 mkt = list(betas = list(comp = 0.6))))
+
+a <- get_ate(dag = g, f.args = f.args, treatment = "mkt", treatment_vals = seq(-2, 2), exposure = "sales")
+pandoc.table(a)
+```
+
+
+The get_ate function enables calculating the $ATE$ using simulation. Let's test that function in
+
+In cases where the relations are more complex and involve non-linearities and interactions calculating the ATE given a DAG and model parameters becomes pretty difficult. 
+
+The analytic calculation shows that the $ATE$ in this case 0.15, which is what we see in the table above. We thus confirm we got the correct $ATE$.
+
+Now let's take a more complicated example:
+
+$$sales = quadratic\left(visits -3 comp\right) + \epsilon_{sales}$$
+
+$$visits = 0.5I(mkt = "medium") + 1.2I(mkt = "high") + \epsilon_{visits}$$
+
+$$mkt = cosin(0.7comp) + \epsilon_{mkt}$$
+```{r}
+f.args <- gen_model_param(dag = g, f.args = list(visits = list(betas = list(mkt = c(0.5, 1.2)), levels = 1), 
+                                                 sales = list(betas = list(visits = 1.5, comp = -4), link = "quadratic"), 
+                                                 mkt = list(betas = list(comp = 2), levels = 3, labels = c("low", "medium", "high"), 
+                                                            link = "exp", sinr = 8)))
+
+treat_vals <- factor(c("low", "medium", "high"), levels = c("low", "medium", "high"))
+a <- get_ate(dag = g, f.args = f.args, treatment = "mkt", treatment_vals = treat_vals, exposure = "sales")
+pandoc.table(a)
+```
+
+```{r}
+sim_data <- sim_mixed_dag(dag = g, f.args, N = 10000)
+sim_data %>% ggplot(aes(mkt, sales)) + geom_boxplot() + stat_smooth() + coord_cartesian(ylim = c(-50, 50))
+```
+
+```{r}
+f.args$mkt$betas$comp <- 0
+sim_data <- sim_mixed_dag(dag = g, f.args, N = 10000)
+sim_data %>% ggplot(aes(mkt, sales)) + geom_boxplot() + stat_smooth() + coord_cartesian(ylim = c(-50, 50))
+```
