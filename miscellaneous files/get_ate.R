@@ -30,9 +30,9 @@ get_ate <- function(dag, f.args = NULL,  treatment = NULL, treatment_vals = NULL
   env <- environment()
   
   for(i in 1:length(treatment_vals)){
-    input_treatment_list = setNames(list(rep(treatment_vals[i], N)), nm = treatment)
+    treatment_ls = setNames(list(rep(treatment_vals[i], N)), nm = treatment)
     for(m in 1:M){
-      sim_data <- do.call(sim_mixed_dag, append(list(dag = dag, f.args = f.args, N = N), input_treatment_list))
+      sim_data <- do.call(sim_mixed_dag, list(dag = dag, N = N, treatment_list = treatment_ls, f.args = f.args))
       results[m, i] <- mean(sim_data[[exposure]])
     }
   }

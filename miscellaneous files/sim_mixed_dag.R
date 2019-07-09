@@ -9,11 +9,11 @@
 # N number of samples to generate
 ## ... set variables using this
 
-sim_mixed_dag <- function(dag, f.args = NULL,  N = 1000, ...){
+sim_mixed_dag <- function(dag, f.args = NULL,  N = 1000, treatment_list = list()){
   if(sum(names(f.args) %in% names(dag)) < length(f.args)) stop("some variable entries in f.args don't match node names in supplied DAG")
   
   env = environment()
-  list2env(list(...), envir = env)
+  list2env(treatment_list, envir = env)
   vars <- names(dag)
   parents <- setNames(lapply(vars, function(var) dagitty::parents(dag, var)), vars)
   if(sum(duplicated(names(f.args)))>0) stop("duplicate f.args variable entries")
