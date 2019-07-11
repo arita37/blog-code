@@ -1,14 +1,5 @@
-# dag - an object of class "dagitty" representing the variable DAG
-# f.args - named list. Each element contains arguments for the g function. The element name denotes the child node name. 
-# Each element is a list with optional arguments:
-## link: "identity"/"quadratic/cosin". This is the link function. 
-## levels: positive integer. 1 indicates continuous. 2 and above indicate the number of levels in a categorical variable
-## betas: a list. Each element name indicate parent node. Each element contains beta coefficients (scalar for numeric parent, vector of length levles - 1 for factor with the firstt level being the baseline)
-## labels: categorical variable labels. Need to be have length equal to the levels argument
-## sinr: signal to noise ratio
-# N number of samples to generate
-
-gen_model_param <- function(dag, f.args = NULL){
+parametric_dag_model <-
+function(dag, f.args = NULL){
   if(is.null(f.args)) f.args <- setNames(vector(mode = "list", length = length(names(dag))), nm = names(dag))
   if(sum(names(f.args) %in% names(dag)) < length(f.args)) stop("some variable entries in f.args don't match node names in supplied DAG")
   if(sum(duplicated(names(f.args)))>0) stop("duplicate f.args variable entries")
@@ -30,5 +21,8 @@ gen_model_param <- function(dag, f.args = NULL){
                                                                         nm = parent)
     }
   }
-  return(f.args)
+  
+  ans <- list(dag = dag, f.args = f.args)
+  class(ans) <- "parametric_dag_model"
+  return(ans)
 }

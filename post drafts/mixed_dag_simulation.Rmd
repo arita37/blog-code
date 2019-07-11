@@ -1,5 +1,5 @@
 ---
-title: 'Mixed DAG simulation'
+title: 'Mixed DAG simulation using the simMixedDAG package'
 author: Iyar Lin
 date: '2019-05-20'
 slug: mixed_dag_simulation
@@ -24,11 +24,17 @@ packages <- c(
 
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(char = packages)
+source("../miscellaneous files/sim_mixed_dag.R")
 ```
 
 ![](/post/causal-inference-bake-off-kaggle-style_files/target.jpg){width=600px height=300px}
 
 # Intro 
+
+On my [previuos post](link) I've discussed how in Causal Inference we don't have a ground truth to use when benchmarking different algoriths. In that post I used a semi-synthetic dataset taken from the ["Atlantic Causal Inference Conference" Data Analysis Challenge](https://github.com/IyarLin/blog-code/blob/master/miscellaneous%20files/Atlantic%20Causal%20Inference%20Conference%20Data%20Analysis%20Challenge%202017.pdf) to benchmark different algorithms on the task of $ATE/CATE$ estimation. Another important task I'll discuss at a later post is the correct identification of the DAG underlying the dataset.
+
+While simulation is a central tool in studying Causal inference
+In this post I introduce a small R package I wrote to enable mixed data type datasets from DAGs.
 
 When studying Causal Inference we usually need to use simulations quite extensively (one of example of that was shown on my [last post](link_to_specific_section)).
 
@@ -73,9 +79,9 @@ ggdag(tidy_dagitty(g)) + theme_dag_blank()
 Below I simulate a dataset where we use the above equation for all nodes, and set the coefficient $\beta_{comp,sales} = -2$
 
 ```{r}
-source("../miscellaneous files/sim_mixed_dag.R")
-sim_data <- sim_mixed_dag(dag = g, f.args = list(sales = list(betas = list(comp = -2)), 
+dag_model <- parametric_dag_model(dag = g, f.args = list(sales = list(betas = list(comp = -2)), 
                                                  mkt = list(betas = list(comp = 0))))
+sim_data <- sim_mixed_dag(dag_model, N = 500)
 sim_data %>% ggplot(aes(comp, sales)) + geom_point() + stat_smooth(method = "lm")
 ```
 
@@ -86,8 +92,11 @@ Note all $\beta$ coefficients not set manually are drawn from a standard normal 
 We can set how noisy the errors are using the "sinr" (signal to noise ratio) argument:
 
 ```{r}
-sim_data <- sim_mixed_dag(dag = g, f.args = list(sales = list(betas = list(comp = -2), sinr = 5), 
+dag_model <- parametric_dag_model(dag = g, f.args = list(sales = list(betas = list(comp = -2), sinr = 5), 
                                                  mkt = list(betas = list(comp = 0))))
+
+sim_data <- sim_mixed_dag(dag_model)
+
 sim_data %>% ggplot(aes(comp, sales)) + geom_point() + stat_smooth(method = "lm")
 ```
 
@@ -102,24 +111,32 @@ Where $lp = \sum_{i \in PA_j}\beta_{ij}x_i$ is the "linear predictor".
 Below I apply a "cosin" link function:  
 
 ```{r}
-sim_data <- sim_mixed_dag(dag = g, f.args = list(sales = list(betas = list(comp = -2), link = "cosin", sinr = 3), 
+dag_model <- parametric_dag_model(dag = g, f.args = list(sales = list(betas = list(comp = -2), link = "cosin", sinr = 3), 
                                                  mkt = list(betas = list(comp = 0))))
+
+sim_data <- sim_mixed_dag(dag_model)
+
 sim_data %>% ggplot(aes(comp, sales)) + geom_point() + stat_smooth()
 ```
 
 Another function implemented is a type of a quadratic transformation:
 
 ```{r}
-sim_data <- sim_mixed_dag(dag = g, f.args = list(sales = list(betas = list(comp = -2), link = "quadratic", sinr = 3), 
+dag_model <- parametric_dag_model(dag = g, f.args = list(sales = list(betas = list(comp = -2), link = "quadratic", sinr = 3), 
                                                  mkt = list(betas = list(comp = 0))))
+
+sim_data <- sim_mixed_dag(dag_model)
+
 sim_data %>% ggplot(aes(comp, sales)) + geom_point() + stat_smooth()
 ```
 
 Lastly, I also incorporate an exponent function:
 
 ```{r}
-sim_data <- sim_mixed_dag(dag = g, f.args = list(sales = list(betas = list(comp = -1), link = "exp", sinr = 2), 
+dag_model <- parametric_dag_model(dag = g, f.args = list(sales = list(betas = list(comp = -2), link = "exp", sinr = 3), 
                                                  mkt = list(betas = list(comp = 0))))
+
+sim_data <- sim_mixed_dag(dag_model)
 sim_data %>% ggplot(aes(comp, sales)) + geom_point() + stat_smooth()
 ```
 
@@ -143,47 +160,24 @@ $$
 We set the number of levels using the "levels" argument (where levels = 1 means continuous variable):
 
 ```{r}
-sim_data <- sim_mixed_dag(dag = g, f.args = list(sales = list(betas = list(comp = -2), 
+dag_model <- parametric_dag_model(dag = g, f.args = list(sales = list(betas = list(comp = -2), 
                                                               link = "quadratic", sinr = 3, levels = 3, labels = c("low", "medium", "high")), mkt = list(betas = list(comp = 0))))
+
+sim_data <- sim_mixed_dag(dag_model)
+
 sim_data %>% ggplot(aes(sales, comp)) + geom_boxplot() + stat_smooth()
-```
-
-# The gen_model_param function
-
-When calling the sim_mixed_dag function all model parameters not set explicitly are either chosen from a default (e.g. link = "identity") or drawn randomly (e.g beta coefficients).
-
-That means that each time one calls the sim_mixed_dag function the data will be simulated using different model parameters unless all model parameters are specified manually.
-
-Since the number of model parameters can get pretty big, one can use the gen_model_param function to easily specify all model parameters. The function takes as input a partially specified f.args list and returns that same listtt with all paramaters not specified by the user filled in. That returned list can now be used across multiple runs of the sim_mixed_dag function with all model parameters staying consistent.
-
-Below I generate a model parameter list specifying some of the parametrs:
-
-```{r}
-f.args_partial = list(sales = list(betas = list(comp = -2), 
-                                   link = "quadratic", sinr = 3, levels = 3, 
-                                   labels = c("low", "medium", "high")), mkt = list(betas = list(comp = 0)))
-print(f.args_partial)
-```
-
-Next I use the gen_model_param to fill in the remaining non-specified parameters as well:
-
-```{r}
-source("../miscellaneous files/gen_model_param.R")
-f.args_full <- gen_model_param(dag = g, f.args = f.args_partial)
-print(f.args_full)
 ```
 
 # The get_ate function
 
-For simple DAGs and model parameters the analytic calculation of the $ATE$ is pretty simple (e.g. continuous gaussian distributed, no interactions etc). For instance consider the problem setup discussed on my [first post](link).
+Having recovered the true DAG, one might be interested with benchmarking differentFor simple DAG models the analytic calculation of the $ATE$ is pretty simple (e.g. continuous gaussian distributed, no interactions etc). For instance consider the problem setup discussed on my [first post](link).
 
 ```{r, results = "asis"}
-source("../miscellaneous files/get_ate.R")
-f.args <- gen_model_param(dag = g, f.args = list(sales = list(betas = list(visits = 0.3, comp = -0.9)), 
+dag_model <- parametric_dag_model(dag = g, f.args = list(sales = list(betas = list(visits = 0.3, comp = -0.9)), 
                                                  visits = list(betas = list(mkt = 0.5)), 
                                                  mkt = list(betas = list(comp = 0.6))))
 
-a <- get_ate(dag = g, f.args = f.args, treatment = "mkt", treatment_vals = seq(-2, 2), exposure = "sales")
+a <- get_ate(dag_model = dag_model, treatment = "mkt", treatment_vals = seq(-2, 2), exposure = "sales")
 pandoc.table(a)
 ```
 
@@ -202,28 +196,32 @@ $$visits = 0.5I(mkt = "medium") + 1.2I(mkt = "high") + \epsilon_{visits}$$
 
 $$mkt = cosin(0.7comp) + \epsilon_{mkt}$$
 ```{r}
-f.args <- gen_model_param(dag = g, f.args = list(visits = list(betas = list(mkt = c(0.5, 1.2)), levels = 1), 
+dag_model <- parametric_dag_model(dag = g, f.args = list(visits = list(betas = list(mkt = c(0.5, 1.2)), levels = 1), 
                                                  sales = list(betas = list(visits = 1.5, comp = -4), link = "quadratic"), 
                                                  mkt = list(betas = list(comp = 2), levels = 3, labels = c("low", "medium", "high"), 
                                                             link = "exp", sinr = 8)))
 
 treat_vals <- factor(c("low", "medium", "high"), levels = c("low", "medium", "high"))
-a <- get_ate(dag = g, f.args = f.args, treatment = "mkt", treatment_vals = treat_vals, exposure = "sales")
+a <- get_ate(dag_model = dag_model, treatment = "mkt", treatment_vals = treat_vals, exposure = "sales")
 pandoc.table(a)
 ```
 
 ```{r}
-sim_data <- sim_mixed_dag(dag = g, f.args, N = 10000)
+sim_data <- sim_mixed_dag(dag_model = dag_model, N = 10000)
 sim_data %>% ggplot(aes(mkt, sales)) + geom_boxplot() + stat_smooth() + coord_cartesian(ylim = c(-50, 50))
 ```
 
 ```{r}
-f.args$mkt$betas$comp <- 0
-sim_data <- sim_mixed_dag(dag = g, f.args, N = 10000)
+dag_model$f.args$mkt$betas$comp <- 0
+sim_data <- sim_mixed_dag(dag_model = dag_model, N = 100000)
 sim_data %>% ggplot(aes(mkt, sales)) + geom_boxplot() + stat_smooth() + coord_cartesian(ylim = c(-50, 50))
 ```
 
-# The gam sim functions
+```{r, results = "asis"}
+sim_data %>% group_by(mkt) %>% summarise(sales = mean(sales)) %>% mutate(sales_diff = sales - lag(sales)) %>% pandoc.table()
+```
+
+# Non paramateric dag models
 
 We'll use the [General Social Survey](https://vincentarelbundock.github.io/Rdatasets/doc/carData/GSSvocab.html) dataset.
 
@@ -255,10 +253,8 @@ ggdag(tidy_dag, node_size = 28) + theme_dag_blank()
 
 
 ```{r}
-source("../miscellaneous files/fit_gam.R")
-gam_fits <- fit_gam(dag = g, data = GSSvocab)
-source("../miscellaneous files/sim_mixed_dag_gam_fits.R")
-sim_data <- sim_mixed_dag_gam_fits(dag = g, gam_fits = gam_fits, N = nrow(GSSvocab))
+dag_model <- non_parametric_dag_model(dag = g, data = GSSvocab)
+sim_data <- sim_mixed_dag(dag_model = dag_model, N = nrow(GSSvocab))
 ```
 
 ```{r}
@@ -276,5 +272,13 @@ GSSvocab %>% group_by(nativeBorn, gender) %>% summarise(freq = n()/nrow(.)) %>% 
 ```
 ```{r, results = "asis"}
 sim_data %>% group_by(nativeBorn, gender) %>% summarise(freq = n()/nrow(.)) %>% spread(key = gender, value = freq) %>% pandoc.table(caption = "Simulated data")
+```
+
+## get_ate non paramteric
+
+```{r}
+a <- get_ate(dag_model, treatment = "educ", exposure = "vocab")
+a <- a %>% mutate(increase_in_vocab_per_year_of_educ = ate/(treatment_value - lag(treatment_value)))
+pandoc.table(a)
 ```
 

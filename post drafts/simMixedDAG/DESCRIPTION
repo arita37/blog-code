@@ -1,0 +1,12 @@
+Package: simMixedDAG
+Type: Package
+Title: Simulate mixed data type datasets from DAG
+Version: 1.0
+Date: 2019-07-10
+Author: Iyar Lin
+Maintainer: <iyarlin@gmail.com>
+Description: This package provides constructor functions to define dag models (both parametric and non-parametric) 
+  and methods to simulte datasets based on those models. Also included is a method to estimate average treatment effect (ATE) 
+  using simulations.
+Depdens: 
+License: GPL-2
