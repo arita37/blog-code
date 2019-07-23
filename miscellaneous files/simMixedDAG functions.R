@@ -1,4 +1,5 @@
 library(dagitty); library(gam); library(mgcv)
+ 
 parametric_dag_model <- function(dag, f.args = NULL){
   if(is.null(f.args)) f.args <- setNames(vector(mode = "list", length = length(names(dag))), nm = names(dag))
   if(sum(names(f.args) %in% names(dag)) < length(f.args)) stop("some variable entries in f.args don't match node names in supplied DAG")
@@ -58,7 +59,7 @@ sim_mixed_dag.parametric_dag_model <- function(dag_model, N = 1000, treatment_li
         beta <- as.matrix(betas[[var]])
       }
       X <- model.matrix(~ var_val - 1)
-      if(is.factor(var_val)) X <- X[, -1]
+      if(is.factor(var_val)) X <- as.matrix(X[, -1])
       if(ncol(X) != nrow(beta)) stop(paste0("Number of levels in \"", var, "\" does not match number of input betas for that variable"))
       lp <- lp + as.numeric(X %*% beta)
     }
@@ -76,7 +77,6 @@ sim_mixed_dag.parametric_dag_model <- function(dag_model, N = 1000, treatment_li
     if(levels > 1){
       if(is.null(labels)) labels <- LETTERS[1:levels]
       if(length(labels) != levels) stop(paste0("labels do not match levels argument for variable \"", result_var, "\""))
-      lp <- lp/sd(lp)
       thresh <- qnorm(p = seq(0, 1, length.out = levels + 1))
       lp <- cut(lp, breaks = thresh, labels = labels, include.lowest = T)
     }
@@ -105,7 +105,7 @@ get_ate.parametric_dag_model <- function(dag_model,  treatment = NULL, treatment
       sample_treatment <- sim_mixed_dag(dag_model)[[treatment]]
       treatment_vals <- unname(quantile(sample_treatment, seq(0.05, 0.95, by = 0.3)))
     } else {
-      treatment_vals <- f.args[[treatment]]$labels
+      treatment_vals <- factor(f.args[[treatment]]$labels, labels = f.args[[treatment]]$labels)
     }
   }
   
