@@ -11,10 +11,7 @@ comments: true
 
 
 
-<div class="figure">
-<img src="/post/sim_mixed_dag_with_simMixedDAG_files/simMixedDAGhex.png" width="380" height="400" />
-
-</div>
+<p><img src="/post/sim_mixed_dag_with_simMixedDAG_files/simMixedDAGhex.png" width="380" height="400" /></p>
 <div id="intro" class="section level1">
 <h1>Intro</h1>
 <p>I’ve discussed on several blog posts how Causal Inference involves making inference about unobserved quantities and distributions (e.g. we never observe <span class="math inline">\(Y|do(x)\)</span>). That means we can’t benchmark different algorithms on Causal Inference tasks (e.g <span class="math inline">\(ATE/CATE\)</span> estimation) the same way we do in ML because we don’t have any ground truth to benchmark against.</p>
@@ -122,7 +119,8 @@ comments: true
 <div id="paramteric-dag-simulation" class="section level1">
 <h1>Paramteric DAG simulation</h1>
 <p>The simMixedDAG provides functions for simulation of complex parametric DAG models as well. These can come handy when one wants to have more control over the specific functions <span class="math inline">\(f_j\)</span>. At it’s most basic form it can be used to simulate simple Gaussian nodes:</p>
-<p><span class="math display">\[f_j(PA_j) = lp + \epsilon_j\]</span> where <span class="math inline">\(lp\)</span> is the linear combination of the node parents: <span class="math inline">\(lp = \sum_{i \in PA_j}\beta_{ij}x_i\)</span>.</p>
+<p><span class="math display">\[f_j(PA_j) = lp + \epsilon_j\]</span>
+where <span class="math inline">\(lp\)</span> is the linear combination of the node parents: <span class="math inline">\(lp = \sum_{i \in PA_j}\beta_{ij}x_i\)</span>.</p>
 <div id="specifying-and-simulating-a-paramateric-dag---an-example" class="section level2">
 <h2>Specifying and simulating a paramateric DAG - an example</h2>
 <p>In this example we’ll use the DAG presented on my <a href="https://iyarlin.github.io/2019/02/08/correlation-is-not-causation-so-what-is/">first post</a>:</p>
@@ -212,7 +210,8 @@ p2 &lt;- sim_data %&gt;% ggplot(aes(comp, sales)) +
 grid.arrange(p1, p2, nrow = 1)</code></pre>
 <p><img src="/post/sim_mixed_dag_with_simMixedDAG_files/figure-html/unnamed-chunk-14-1.png" width="576" /></p>
 <p>We introduce categorical variables with <span class="math inline">\(M\)</span> levels via the following transformation:</p>
-<p><span class="math display">\[f_j(PA_j) = cat(g(lp) + \epsilon_j)\]</span> where we have:</p>
+<p><span class="math display">\[f_j(PA_j) = cat(g(lp) + \epsilon_j)\]</span>
+where we have:</p>
 <p><span class="math display">\[  
 cat(x) = 
 \begin{cases}
@@ -276,12 +275,12 @@ mkt_ATE_on_sales &lt;- get_ate(param_dag_model,
 )
 pandoc.table(mkt_ATE_on_sales, 
              caption = &quot;mkt ATE on sales&quot;)</code></pre>
-<table style="width:28%;">
+<table style="width:29%;">
 <caption>mkt ATE on sales</caption>
 <colgroup>
 <col width="9%" />
 <col width="6%" />
-<col width="11%" />
+<col width="12%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -317,7 +316,8 @@ pandoc.table(mkt_ATE_on_sales,
 <p>Now let’s take a more complicated model defined by the following equations:</p>
 <p><span class="math display">\[sales = quadratic\left(1.5 \cdot visits -4 \cdot  comp\right) + \epsilon_{sales}\]</span></p>
 <p><span class="math display">\[visits = 0.5I(mkt = &quot;medium&quot;) + 1.2I(mkt = &quot;high&quot;) + \epsilon_{visits}\]</span></p>
-<p><span class="math display">\[mkt = cat(exp(2 \cdot comp) + \epsilon_{mkt})\]</span> with <span class="math inline">\(mkt\)</span> taking the levels “low”, “medium” and “high”.</p>
+<p><span class="math display">\[mkt = cat(exp(2 \cdot comp) + \epsilon_{mkt})\]</span>
+with <span class="math inline">\(mkt\)</span> taking the levels “low”, “medium” and “high”.</p>
 <p>Below is the code to define the model defined by the equations above and get the corresponding ate of mkt on sales.</p>
 <pre class="r"><code>param_dag_model &lt;- parametric_dag_model(dag = g, 
                                         f.args = list(
@@ -376,11 +376,11 @@ sim_data %&gt;%
   summarise(sales = mean(sales)) %&gt;%
   mutate(sales_diff = sales - lag(sales)) %&gt;%
   pandoc.table()</code></pre>
-<table style="width:40%;">
+<table style="width:42%;">
 <colgroup>
 <col width="12%" />
 <col width="11%" />
-<col width="16%" />
+<col width="18%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -422,13 +422,13 @@ sim_data %&gt;%
                            &quot;PhD&quot;))
 pandoc.table(educ_ate_on_vocab, 
              caption = &quot;educ ATE on vocab&quot;)</code></pre>
-<table style="width:50%;">
+<table style="width:51%;">
 <caption>educ ATE on vocab</caption>
 <colgroup>
 <col width="9%" />
 <col width="6%" />
 <col width="12%" />
-<col width="20%" />
+<col width="22%" />
 </colgroup>
 <thead>
 <tr class="header">
